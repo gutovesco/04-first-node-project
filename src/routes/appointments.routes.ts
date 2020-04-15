@@ -1,6 +1,7 @@
 import {Router} from 'express'
-import {startOfHour, parseISO} from 'date-fns'
+import {parseISO, parse} from 'date-fns'
 import AppointmentsRepository from '../Appointments/AppointmentsRepository'
+import CreateAppointmentService from '../services/CreateAppointmentService'
 
 const appointmentsRouter = Router()
 
@@ -15,28 +16,21 @@ appointmentsRouter.get('/', (request, response) => {
 })
 
 appointmentsRouter.post('/', (request, response) => {
+  try{
   const {provider, date} = request.body
 
   //a data é convertido para o formato ISO
-  const parsedDate = startOfHour(parseISO(date))
+  const parsedDate = parseISO(date)
 
-  //armazena o resultado da busca por método na variavel
-  const findAppointmentInSameDate = appointmentsRepository.findByDate(parsedDate)
+  const createAppointment = new CreateAppointmentService(appointmentsRepository)
 
-  //se a data do novo agendamento já existe, retorna um erro falando que já tem um agendamento
-  if(findAppointmentInSameDate){
-    return response
-    .status(400)
-    .json({message: 'Appointment already booked'})
-  }
-
-  //método que cria um novo agendamento
-  const appointment = appointmentsRepository.create({
-    provider,
-    date: parsedDate
-  })
+  const appointment = createAppointment.execute({provider, date: parsedDate})
 
   return response.json(appointment)
+  }
+  catch(err){
+    return response.status(400).json({error: err.message})
+  }
 })
 
 export default appointmentsRouter
